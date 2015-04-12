@@ -1,32 +1,136 @@
 package perceptlab
 
+import scala.annotation.tailrec
 import scala.io.Source
+import Game._
 import Labyrinth._
+import math._
 
-case class Labyrinth(tiles: Seq[Seq[Tile]], playerStartingPosition: Point, objectivePosition: Point) {
-  var playerDirection = 0.0
-  var playerLocation = playerStartingPosition.scale(TileSize).translate(TileCenter, TileCenter)
+case class Labyrinth(tiles: Seq[Seq[Tile]], playerStartingTile: Point, objectiveTile: Point) {
+  def sonarDistances(player: Player): Seq[Double] =
+    SonarAngleOffsets.map { offset =>
+//      println(s"\nTreating angle offset $offset")
+      sonarDistance(player.location, normalized(player.direction + offset))
+    }
+
+  @tailrec
+  final def sonarDistance(location: Point, normalizedAngle: Double, distance: Double = 0): Double = {
+    val quadrant = TileCorners
+      .map(corner => Quadrant(corner, location.local.angle(corner.localLocation)) )
+      .sliding(2)
+      .find { case Seq(currentQuadrant, nextQuadrant) =>
+        if (currentQuadrant.angle > nextQuadrant.angle)
+          currentQuadrant.angle >= normalizedAngle && normalizedAngle > nextQuadrant.angle
+        else
+          currentQuadrant.angle >= normalizedAngle || normalizedAngle > nextQuadrant.angle
+      }
+      .get
+      .head
+//    println(s"Angle: ${math.round(normalizedAngle/2/Pi*360) - 360}")
+//    println(s"Quadrant: $quadrant")
+
+    val tileOffset =
+      quadrant.nextTileOffset(normalizedAngle)
+
+    val nextTile =
+      tiles(location.asPosition.y + tileOffset.y)(location.asPosition.x + tileOffset.x)
+
+//    println(s"Next tile: $nextTile")
+    val nextLocation =
+      quadrant.nextLocation(location, normalizedAngle)
+
+//    println(s"Next location: $nextLocation")
+    val newDistance =
+      distance + nextLocation.distance(location)
+
+//    println(s"New distance: $newDistance")
+    if (nextTile.isWall)
+      newDistance
+    else
+      sonarDistance(nextLocation, normalizedAngle, newDistance)
+  }
+
+  private def normalized(angle: Double) =
+    (angle % `2Pi`) + `2Pi`
 }
 
-case class Point(x: Int = 0, y: Int = 0) {
-  def scale(factor: Int) =
-    Point(x * factor, y * factor)
-  def translate(tx: Int, ty: Int) =
-    Point(x + tx, y + ty)
+case class Tile(position: Point, isWall: Boolean)
+
+case class TileCorner(localLocation: Point, nextTileOffset: Point, cornerOffset: Point) {
+  val isTop = nextTileOffset.y == -1
+  val isBottom = nextTileOffset.y == 1
+  val isLeft = nextTileOffset.x == -1
+  val isRight = nextTileOffset.x == 1
+
+  def nextLocation(globalPoint: Point, angle: Double): Point = {
+    val local  = globalPoint.local
+    if (angle == 2 * Pi) // horizontally to right
+      globalPoint.translate(
+        - local.x + TileSize,
+        0
+      )
+    else if (angle == Pi) // horizontally to left
+      globalPoint.translate(
+        - local.x,
+        0
+      )
+    else if (angle == 3 * Pi / 2) // vertically to bottom
+      globalPoint.translate(
+        0,
+        -local.y + TileSize
+      )
+    else if (angle == Pi / 2) // vertically to top
+      globalPoint.translate(
+        0,
+        -local.y
+      )
+    else if (isTop)
+      globalPoint.translate(
+        round(local.y / tan(angle)).toInt,
+        -local.y
+      )
+    else if (isBottom)
+      globalPoint.translate(
+        - round((TileSize - local.y) / tan(angle)).toInt,
+        - local.y + TileSize
+      )
+    else if (isLeft)
+      globalPoint.translate(
+        - local.x,
+        round(local.x / tan(angle)).toInt
+      )
+    else
+      globalPoint.translate(
+        - local.x + TileSize,
+        - round((TileSize - local.x) / tan(angle)).toInt
+      )
+  }
 }
 
-case class Tile(position: Point, isWall: Boolean) {
-  lazy val location: Point = position.scale(TileSize)
+case class Quadrant(corner: TileCorner, angle: Double) {
+  def nextLocation(globalPoint: Point, angle: Double) =
+    corner.nextLocation(globalPoint, angle)
+
+  def nextTileOffset(normalizedAngle: Double) =
+    if (normalizedAngle != angle)
+      corner.nextTileOffset
+    else
+      corner.cornerOffset
 }
 
 object Labyrinth {
-  val TileSize = 100
-  val TileCenter = TileSize / 2
+  val TileCorners = Seq(
+    TileCorner(Point(0, 0), Point(0, -1), Point(-1, -1)),
+    TileCorner(Point(100, 0), Point(1, 0), Point(1, -1)),
+    TileCorner(Point(100, 100), Point(0, 1), Point(1, 1)),
+    TileCorner(Point(0, 100), Point(-1, 0), Point(-1, 1)),
+    TileCorner(Point(0, 0), Point(0, -1), Point(-1, -1))
+  )
 
-  def apply(resourcePath: String = "/default.lab"): Labyrinth =
+  def apply(resourcePath: String = "default.lab"): Labyrinth =
     Source
       .fromInputStream(getClass.getClassLoader.getResourceAsStream(resourcePath))
-      .getLines
+      .getLines()
       .toSeq
       .zipWithIndex
       .foldLeft(Labyrinth(Nil, Point(), Point())) { (laby, lineWithIndex) =>
@@ -42,8 +146,8 @@ object Labyrinth {
 
         laby.copy(
           tiles = laby.tiles :+ row,
-          playerStartingPosition = if (playerColumn >= 0) Point(playerColumn, rIndex) else laby.playerStartingPosition,
-          objectivePosition = if (objectiveColumn >= 0) Point(objectiveColumn, rIndex) else laby.objectivePosition
+          playerStartingTile = if (playerColumn >= 0) Point(playerColumn, rIndex) else laby.playerStartingTile,
+          objectiveTile = if (objectiveColumn >= 0) Point(objectiveColumn, rIndex) else laby.objectiveTile
         )
       }
 }
