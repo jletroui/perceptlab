@@ -8,8 +8,8 @@ case class Player(startingTile: Point) {
   var direction = 0.0
   var location = startingTile.tileCenterAsLocation
 
-  def moveForward(max: Double, nanos: Long) = {
-    val dist = min(nanos * MovingSpeedPerNano, max)
+  def moveForward(maxAllowed: Double, nanos: Long) = {
+    val dist = min(nanos * MovingSpeedPerNano, max(maxAllowed, 0))
     location = location.translate(dist * cos(direction), - dist * sin(direction))
   }
 
