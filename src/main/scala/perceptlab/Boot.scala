@@ -1,42 +1,49 @@
 package perceptlab
 
+import java.util.concurrent.atomic.AtomicReference
+import javax.swing.SwingUtilities
+
 import scala.annotation.tailrec
 
 object Boot extends App {
-  private val laby = Labyrinth()
-  private val player = Player(laby.playerStartingTile)
-  private val scale = Scale(0.0 -> 300.0, 127 -> 0)
-  private val minWallDistance = 2
+  val laby = Labyrinth()
+  val player = new AtomicReference(Player(laby.playerStartingTile))
+  val scale = Scale(0.0 -> 300.0, 127 -> 0)
+  val minWallDistance = 2
+  val ui = new PerceptLabUI(player)
+  SwingUtilities.invokeLater(ui)
 
   using(SoundDisplay) { disp =>
-    using(Keyboard) { keyboard =>
 
       @tailrec
-      def loop(previousNanos: Long = System.nanoTime()): Unit = {
-        val distances = laby.sonarDistances(player)
+      def loop(previousMillis: Long = System.currentTimeMillis): Unit = {
+        val distances = laby.sonarDistances(player.get)
         val scaled = distances.map(scale.scale)
         disp.setSonarLevels(scaled)
 
-        val nanos = System.nanoTime()
-        val elapsed = nanos - previousNanos
+        val millis = System.currentTimeMillis
+        val elapsed = millis - previousMillis
 
-        if (keyboard.isUpPressed) {
+        if (elapsed < 9) println(elapsed)
+
+        if (ui.keyboard.isUpPressed) {
           val maxAllowedWalkDistance = distances(Game.MidSonar) - minWallDistance
-          player.moveForward(maxAllowedWalkDistance, elapsed)
+          player.getAndUpdate((p: Player) => p.moveForward(maxAllowedWalkDistance, elapsed))
          }
 
-        if (keyboard.isLeftPressed)
-          player.turnLeft(elapsed)
+        if (ui.keyboard.isLeftPressed)
+          player.getAndUpdate((p: Player) => p.turnLeft(elapsed))
 
-        if (keyboard.isRightPressed)
-          player.turnRight(elapsed)
+        if (ui.keyboard.isRightPressed)
+          player.getAndUpdate((p: Player) => p.turnRight(elapsed))
 
-        if (!keyboard.isEscapePressed)
-          loop(nanos)
+        Thread.sleep(20)
+
+        if (!ui.keyboard.isEscapePressed)
+          loop(millis)
       }
 
-      loop()
 
-    }
+      loop()
   }
 }

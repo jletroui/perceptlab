@@ -26,16 +26,19 @@ object SoundDisplay extends Closeable {
   }
 
   private case class Note(sonarIndex: Int) {
-    val note = C6 - sonarIndex * 4
-    val chan = synth.getChannels()(sonarIndex)
+    private val note = C6 - sonarIndex * 4
+    private val chan = synth.getChannels()(sonarIndex)
     chan.programChange(0, Flute)
     chan.controlChange(PanControl, Pans(sonarIndex))
     chan.noteOn(note, 0) // Starts at C6, and then go third by third down for each sonar.
+    private var previousVolume = 0
 
-    def adjustVolume(newVolume: Int) = {
-      chan.noteOff(note)
-      chan.noteOn(note, newVolume)
-    }
+    def adjustVolume(newVolume: Int) =
+      if (newVolume != previousVolume) {
+        chan.noteOff(note)
+        chan.noteOn(note, newVolume)
+        previousVolume = newVolume
+      }
 
     def close() =
       chan.allSoundOff()

@@ -1,16 +1,11 @@
 package perceptlab
 
-import java.io.Closeable
+import java.awt.event.{KeyEvent, KeyListener}
 import java.util.concurrent.atomic.AtomicBoolean
+import javax.swing.JFrame
 
-import org.jnativehook.GlobalScreen
-import org.jnativehook.keyboard.{NativeKeyEvent, NativeKeyListener}
-
-import scala.util.Try
-
-object Keyboard extends NativeKeyListener with Closeable {
-  GlobalScreen.registerNativeHook()
-  GlobalScreen.getInstance().addNativeKeyListener(this)
+class Keyboard(frame: JFrame) extends KeyListener {
+  frame.addKeyListener(this)
 
   private case class Key(code: Int) {
     private val pressedFlag = new AtomicBoolean(false)
@@ -24,10 +19,10 @@ object Keyboard extends NativeKeyListener with Closeable {
     def isPressed = pressedFlag.get
   }
 
-  private val upKey = Key(NativeKeyEvent.VK_UP)
-  private val leftKey = Key(NativeKeyEvent.VK_LEFT)
-  private val rightKey = Key(NativeKeyEvent.VK_RIGHT)
-  private val escapeKey = Key(NativeKeyEvent.VK_ESCAPE)
+  private val upKey = Key(KeyEvent.VK_UP)
+  private val leftKey = Key(KeyEvent.VK_LEFT)
+  private val rightKey = Key(KeyEvent.VK_RIGHT)
+  private val escapeKey = Key(KeyEvent.VK_ESCAPE)
   private val keys = List(upKey, leftKey, rightKey, escapeKey)
 
   def isUpPressed = upKey.isPressed
@@ -35,16 +30,11 @@ object Keyboard extends NativeKeyListener with Closeable {
   def isRightPressed = rightKey.isPressed
   def isEscapePressed = escapeKey.isPressed
 
-  override def nativeKeyPressed(nativeKeyEvent: NativeKeyEvent) =
-    keys.foreach(_.checkPressed(nativeKeyEvent.getKeyCode))
+  def keyPressed(keyEvent: KeyEvent) =
+    keys.foreach(_.checkPressed(keyEvent.getKeyCode))
 
-  override def nativeKeyReleased(nativeKeyEvent: NativeKeyEvent) =
-    keys.foreach(_.checkReleased(nativeKeyEvent.getKeyCode))
+  def keyReleased(keyEvent: KeyEvent) =
+    keys.foreach(_.checkReleased(keyEvent.getKeyCode))
 
-  override def nativeKeyTyped(nativeKeyEvent: NativeKeyEvent) = {}
-
-  override def close() = {
-    Try(GlobalScreen.getInstance().removeNativeKeyListener(this))
-    GlobalScreen.unregisterNativeHook()
-  }
+  def keyTyped(nativeKeyEvent: KeyEvent) = {}
 }

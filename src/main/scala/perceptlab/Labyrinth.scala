@@ -26,8 +26,8 @@ case class Labyrinth(tiles: Seq[Seq[Tile]], playerStartingTile: Point, objective
       }
       .get
       .head
-//    println(s"Angle: ${math.round(normalizedAngle/2/Pi*360) - 360}")
-//    println(s"Quadrant: $quadrant")
+    println(s"Angle: ${math.round(normalizedAngle/2/Pi*360) - 360}")
+    println(s"Quadrant: $quadrant")
 
     val tileOffset =
       quadrant.nextTileOffset(normalizedAngle)
@@ -35,15 +35,15 @@ case class Labyrinth(tiles: Seq[Seq[Tile]], playerStartingTile: Point, objective
     val nextTile =
       tiles(location.asPosition.y + tileOffset.y)(location.asPosition.x + tileOffset.x)
 
-//    println(s"Next tile: $nextTile")
+    println(s"Next tile: $nextTile")
     val nextLocation =
       quadrant.nextLocation(location, normalizedAngle)
 
-//    println(s"Next location: $nextLocation")
+    println(s"Next location: $nextLocation")
     val newDistance =
       distance + nextLocation.distance(location)
 
-//    println(s"New distance: $newDistance")
+    println(s"New distance: $newDistance")
     if (nextTile.isWall)
       newDistance
     else
@@ -56,7 +56,7 @@ case class Labyrinth(tiles: Seq[Seq[Tile]], playerStartingTile: Point, objective
 
 case class Tile(position: Point, isWall: Boolean)
 
-case class TileCorner(localLocation: Point, nextTileOffset: Point, cornerOffset: Point) {
+case class TileCorner(localLocation: Point, nextTileOffset: IntegerPoint, cornerOffset: IntegerPoint) {
   val isTop = nextTileOffset.y == -1
   val isBottom = nextTileOffset.y == 1
   val isLeft = nextTileOffset.x == -1
@@ -120,11 +120,11 @@ case class Quadrant(corner: TileCorner, angle: Double) {
 
 object Labyrinth {
   val TileCorners = Seq(
-    TileCorner(Point(0, 0), Point(0, -1), Point(-1, -1)),
-    TileCorner(Point(100, 0), Point(1, 0), Point(1, -1)),
-    TileCorner(Point(100, 100), Point(0, 1), Point(1, 1)),
-    TileCorner(Point(0, 100), Point(-1, 0), Point(-1, 1)),
-    TileCorner(Point(0, 0), Point(0, -1), Point(-1, -1))
+    TileCorner(Point(0, 0), IntegerPoint(0, -1), IntegerPoint(-1, -1)),
+    TileCorner(Point(100, 0), IntegerPoint(1, 0), IntegerPoint(1, -1)),
+    TileCorner(Point(100, 100), IntegerPoint(0, 1), IntegerPoint(1, 1)),
+    TileCorner(Point(0, 100), IntegerPoint(-1, 0), IntegerPoint(-1, 1)),
+    TileCorner(Point(0, 0), IntegerPoint(0, -1), IntegerPoint(-1, -1))
   )
 
   def apply(resourcePath: String = "default.lab"): Labyrinth =

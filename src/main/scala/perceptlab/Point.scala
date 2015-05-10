@@ -3,21 +3,21 @@ package perceptlab
 import Game._
 import math._
 
-case class Point(x: Int = 0, y: Int = 0) {
-  def scale(factor: Int) =
+case class Point(x: Double = 0, y: Double = 0) {
+  def scale(factor: Double) =
     Point(x * factor, y * factor)
 
-  def translate(tx: Int, ty: Int): Point =
-    Point(x + tx, y + ty)
-
   def translate(tx: Double, ty: Double): Point =
-    translate(round(tx).toInt, round(ty).toInt)
+    if (tx != 0 || ty != 0)
+      Point(x + tx, y + ty)
+    else
+      this
 
   lazy val local =
     Point(x % TileSize, y % TileSize)
 
   lazy val asPosition =
-    Point(x / TileSize, y / TileSize)
+    IntegerPoint(floor(x / TileSize).toInt, floor(y / TileSize).toInt)
 
   lazy val tileCenterAsLocation =
     scale(TileSize).translate(TileCenter, TileCenter)
@@ -27,5 +27,9 @@ case class Point(x: Int = 0, y: Int = 0) {
 
   def angle(other: Point) =
     - signum(other.y - y) * (acos((other.x - x) / distance(other)) % `2Pi`) + `2Pi`
+
+  def toIntegerPoint =
+    IntegerPoint(round(x).toInt, round(y).toInt)
 }
 
+case class IntegerPoint(x: Int = 0, y: Int = 0)

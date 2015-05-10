@@ -4,26 +4,36 @@ import Player._
 
 import scala.math._
 
-case class Player(startingTile: Point) {
-  var direction = 0.0
-  var location = startingTile.tileCenterAsLocation
-
-  def moveForward(maxAllowed: Double, nanos: Long) = {
-    val dist = min(nanos * MovingSpeedPerNano, max(maxAllowed, 0))
-    location = location.translate(dist * cos(direction), - dist * sin(direction))
+case class Player(location: Point, direction: Double) {
+  def moveForward(maxAllowed: Double, millis: Long) = {
+    val dist = min(millis * MovingSpeedPerMillis, max(maxAllowed, 0))
+    val newLocation = location.translate(dist * cos(direction), - dist * sin(direction))
+    if (dist != 0)
+      println(s"$newLocation")
+    copy(location = newLocation)
   }
 
-  def turnLeft(nanos: Long) = {
-    direction = direction + nanos * AngleSpeedPerNano
+  def turnLeft(millis: Long) = {
+    val angularDist = millis * AngleSpeedPerMillis
+      println(s"$direction + $angularDist")
+    copy(direction = direction + angularDist)
   }
 
-  def turnRight(nanos: Long) =
-    turnLeft(-nanos)
+  def turnRight(millis: Long) =
+    turnLeft(-millis)
+
+  lazy val integerPosition = location.toIntegerPoint
 }
 
 object Player {
   val MovingSpeed = 5           // pixels per second
-  val AngleSpeed = math.Pi / 36 // radians per second
-  val MovingSpeedPerNano = MovingSpeed / 1000000000.0
-  val AngleSpeedPerNano = AngleSpeed / 1000000000.0
+  val AngleSpeed = degrees(22) // radians per second
+  val MovingSpeedPerMillis = MovingSpeed / 1000.0
+  val AngleSpeedPerMillis = AngleSpeed / 1000.0
+
+  def apply(startingTile: Point): Player =
+    Player(startingTile.tileCenterAsLocation, 0.0)
+
+  def degrees(degrees: Int) =
+    degrees * Pi / 180.0
 }
