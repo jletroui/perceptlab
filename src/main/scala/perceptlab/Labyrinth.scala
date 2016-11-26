@@ -5,6 +5,7 @@ import scala.io.Source
 import Game._
 import Labyrinth._
 import math._
+import scala.util.control.NonFatal
 
 case class Labyrinth(tiles: Seq[Seq[Tile]], playerStartingTile: Point, objectiveTile: Point) {
   def sonarDistances(player: Player): Seq[Double] =
@@ -15,35 +16,53 @@ case class Labyrinth(tiles: Seq[Seq[Tile]], playerStartingTile: Point, objective
 
   @tailrec
   final def sonarDistance(location: Point, normalizedAngle: Double, distance: Double = 0): Double = {
-    val quadrant = TileCorners
-      .map(corner => Quadrant(corner, location.local.angle(corner.localLocation)) )
-      .sliding(2)
-      .find { case Seq(currentQuadrant, nextQuadrant) =>
+      val quadrant = TileCorners
+        .map(corner => Quadrant(corner, location.local.angle(corner.localLocation)))
+        .sliding(2)
+        .find { case Seq(currentQuadrant, nextQuadrant) =>
         if (currentQuadrant.angle > nextQuadrant.angle)
           currentQuadrant.angle >= normalizedAngle && normalizedAngle > nextQuadrant.angle
         else
           currentQuadrant.angle >= normalizedAngle || normalizedAngle > nextQuadrant.angle
       }
-      .get
-      .head
-    println(s"Angle: ${math.round(normalizedAngle/2/Pi*360) - 360}")
-    println(s"Quadrant: $quadrant")
+        .get
+        .head
+//      println(s"Angle: ${math.round(normalizedAngle / 2 / Pi * 360) - 360}")
+//      println(s"Quadrant: $quadrant")
 
-    val tileOffset =
-      quadrant.nextTileOffset(normalizedAngle)
+      val tileOffset =
+        quadrant.nextTileOffset(normalizedAngle)
 
-    val nextTile =
-      tiles(location.asPosition.y + tileOffset.y)(location.asPosition.x + tileOffset.x)
+    val nextTile = try {
+        tiles(location.asPosition.y + tileOffset.y)(location.asPosition.x + tileOffset.x)
+    }
+    catch {
+      case ex: Throwable =>
+        println(s"Location: $location Distance: $distance")
+        println(s"Angle: ${math.round(normalizedAngle / 2 / Pi * 360) - 360}")
+        println(s"Quadrant: $quadrant")
+        throw ex
+    }
 
-    println(s"Next tile: $nextTile")
+//      println(s"Next tile: $nextTile")
     val nextLocation =
       quadrant.nextLocation(location, normalizedAngle)
 
-    println(s"Next location: $nextLocation")
+    if (nextLocation.x < 0 || nextLocation.y < 0) {
+      println(s"Location: $location Distance: $distance")
+      println(s"Angle: ${math.round(normalizedAngle / 2 / Pi * 360) - 360}")
+      println(s"Quadrant: $quadrant")
+      println(s"Next tile: $nextTile")
+      println(s"Next location: $nextLocation")
+      throw new Exception("Oh oh. Next location is invalid.")
+    }
+
+
+//      println(s"Next location: $nextLocation")
     val newDistance =
       distance + nextLocation.distance(location)
 
-    println(s"New distance: $newDistance")
+//      println(s"New distance: $newDistance")
     if (nextTile.isWall)
       newDistance
     else
