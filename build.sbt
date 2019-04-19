@@ -4,12 +4,10 @@ organization := "com.github"
 
 crossPaths := false
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.12.8"
 
 mainClass in assembly := Some("perceptlab.Boot")
 
-resolvers += "clojars" at "https://clojars.org/repo"
-
 libraryDependencies ++= Seq(
-  "org.scalatest" %% "scalatest" % "2.1.6"  % "test"
+  "org.scalatest" %% "scalatest" % "3.0.5"  % "test"
 )
